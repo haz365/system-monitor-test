@@ -1,7 +1,11 @@
 from flask import Flask, jsonify, render_template_string
 import psutil
+import redis
+import json
+import os
 
 app = Flask(__name__)
+cache = redis.Redis(host=os.getenv('REDIS_HOST', 'localhost'), port=6379, decode_responses=True)
 
 @app.route('/')
 def index():
@@ -81,6 +85,11 @@ def health():
 
 @app.route('/api/metrics')
 def metrics():
+    # Check cache first
+    cached = cache.get('metrics')
+    if cached:
+        return jsonify(json.loads(cached))
+
     data = []
 
     # CPU Usage
@@ -138,6 +147,9 @@ def metrics():
             'label': 'Not available on Mac',
             'percent': 0
         })
+
+    # Cache for 2 seconds
+    cache.setex('metrics', 2, json.dumps(data))
 
     return jsonify(data)
 
