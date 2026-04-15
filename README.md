@@ -67,3 +67,37 @@ The Flask app receives requests from the browser. Before collecting metrics it c
 | `Dockerfile` | Container definition |
 | `docker-compose.yml` | Orchestrates app and Redis |
 | `.dockerignore` | Excludes unnecessary files |
+
+## Docker Optimisation
+
+The Docker image was reduced from **237MB to 112MB** using two techniques:
+
+### 1. Alpine base image
+Instead of the standard Python image which is based on Debian, the app uses `python:3.11-alpine` — a minimal Linux distribution that is only 5MB compared to Debian's 100MB+.
+
+### 2. Multi-stage build
+The build process is split into two stages:
+
+```dockerfile
+# Stage 1 — install dependencies
+FROM python:3.11-alpine AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Stage 2 — final image
+FROM python:3.11-alpine
+WORKDIR /app
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY . .
+```
+
+Stage 1 installs all the dependencies. Stage 2 starts completely fresh and only copies the installed packages across — not the build tools, pip cache, or anything else used during installation. This keeps the final image as lean as possible.
+
+### Result
+
+| Version | Image size |
+|---|---|
+| Before (python:3.11-slim) | 237MB |
+| After (alpine + multi-stage) | 112MB |
+| Compressed (Docker Hub) | 26MB |
