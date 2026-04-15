@@ -53,28 +53,17 @@ docker-compose down
 ---
 
 ## Architecture
-Browser
-│
-▼
-Flask App (port 5000)
-│
-├── GET /          → serves dashboard
-├── GET /health    → health check
-└── GET /api/metrics
-│
-├── check Redis cache
-│     └── if cached → return immediately
-└── if not cached
-├── collect metrics with psutil
-├── store in Redis for 2 seconds
-└── return metrics
+Browser → Flask App (port 5000) → Redis Cache → psutil
+The Flask app receives requests from the browser. Before collecting metrics it checks Redis for a cached response. If cached data exists it returns immediately. If not it collects fresh metrics using psutil, stores them in Redis for 2 seconds, then returns the data.
 
 ---
 
 ## Project Structure
-system-monitor/
-├── app.py              # Flask app and metrics collection
-├── requirements.txt    # Python dependencies
-├── Dockerfile          # Container definition
-├── docker-compose.yml  # Orchestrates app and Redis
-└── .dockerignore       # Excludes unnecessary files
+
+| File | Description |
+|---|---|
+| `app.py` | Flask app and metrics collection |
+| `requirements.txt` | Python dependencies |
+| `Dockerfile` | Container definition |
+| `docker-compose.yml` | Orchestrates app and Redis |
+| `.dockerignore` | Excludes unnecessary files |
